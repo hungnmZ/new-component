@@ -29,7 +29,7 @@ const config = getConfig();
 
 // Convenience wrapper around Prettier, so that config doesn't have to be
 // passed every time.
-const prettify = buildPrettifier(config.prettierConfig);
+// const prettify = buildPrettifier(config.prettierConfig);
 
 program
   .version(version)
@@ -37,13 +37,13 @@ program
   .option(
     '-l, --lang <language>',
     'Which language to use (default: "js")',
-    /^(js|ts)$/i,
-    config.lang
+    /^(js|ts|tsp)$/i,
+    config.lang,
   )
   .option(
     '-d, --dir <pathToDirectory>',
     'Path to the "components" directory (default: "src/components")',
-    config.dir
+    config.dir,
   )
   .parse(process.argv);
 
@@ -52,7 +52,7 @@ const [componentName] = program.args;
 const options = program.opts();
 
 const fileExtension = options.lang === 'js' ? 'js' : 'tsx';
-const indexExtension = options.lang === 'js' ? 'js' : 'ts';
+const indexExtension = options.lang;
 
 // Find the path to the selected template file.
 const templatePath = `./templates/${options.lang}.js`;
@@ -60,13 +60,13 @@ const templatePath = `./templates/${options.lang}.js`;
 // Get all of our file paths worked out, for the user's project.
 const componentDir = `${options.dir}/${componentName}`;
 const filePath = `${componentDir}/${componentName}.${fileExtension}`;
-const indexPath = `${componentDir}/index.${indexExtension}`;
+const indexPath = `${componentDir}/index.${indexExtension === 'js' ? 'js' : 'ts'}`;
 
 // Our index template is super straightforward, so we'll just inline it for now.
-const indexTemplate = prettify(`\
+const indexTemplate = `\
 export * from './${componentName}';
 export { default } from './${componentName}';
-`);
+`;
 
 logIntro({
   name: componentName,
@@ -76,9 +76,7 @@ logIntro({
 
 // Check if componentName is provided
 if (!componentName) {
-  logError(
-    `Sorry, you need to specify a name for your component like this: new-component <name>`
-  );
+  logError(`Sorry, you need to specify a name for your component like this: new-component <name>`);
   process.exit(0);
 }
 
@@ -90,7 +88,7 @@ createParentDirectoryIfNecessary(options.dir);
 const fullPathToComponentDir = path.resolve(componentDir);
 if (fs.existsSync(fullPathToComponentDir)) {
   logError(
-    `Looks like this component already exists! There's already a component at ${componentDir}.\nPlease delete this directory and try again.`
+    `Looks like this component already exists! There's already a component at ${componentDir}.\nPlease delete this directory and try again.`,
   );
   process.exit(0);
 }
@@ -104,11 +102,11 @@ mkDirPromise(componentDir)
   })
   .then((template) =>
     // Replace our placeholders with real data (so far, just the component name)
-    template.replace(/COMPONENT_NAME/g, componentName)
+    template.replace(/COMPONENT_NAME/g, componentName),
   )
   .then((template) =>
     // Format it using prettier, to ensure style consistency, and write to file.
-    writeFilePromise(filePath, prettify(template))
+    writeFilePromise(filePath, template),
   )
   .then((template) => {
     logItemCompletion('Component built and saved to disk.');
@@ -116,7 +114,7 @@ mkDirPromise(componentDir)
   })
   .then((template) =>
     // We also need the `index.js` file, which allows easy importing.
-    writeFilePromise(indexPath, prettify(indexTemplate))
+    writeFilePromise(indexPath, indexTemplate),
   )
   .then((template) => {
     logItemCompletion('Index file built and saved to disk.');
